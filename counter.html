@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<title></title>
+
+<style>
+.elementDiv_css {
+    margin: 5px;
+    font-size: x-large;
+}
+
+.elementTittleInput_css {
+    margin: 5px;
+    font-size: x-large;
+    width: 200px;
+}
+
+.elementNumberInput_css {
+    margin: 5px;
+    font-size: x-large;
+    width: 60px;
+}
+
+.elementBtn_css {
+    font-size: large;
+}
+</style>
+<script type="text/javascript">
+
+const elementCount_key = "elementCount"
+const elementData_key = "ele_";
+const elementType_Animate = 0;
+const elementType_Bar = 1;
+let elementCount_val = 0;
+let elementEditIdx = null;
+
+function setData(key, value) { localStorage.setItem(key, value); }
+function getData(key) { return localStorage.getItem(key);}
+function delData(key) { localStorage.removeItem(key); }
+
+function getElementData(idx) {
+    if (getData(elementData_key+idx) == null) {
+        alert("getElementData " + idx + " error!");
+        return [Number(idx), elementType_Bar, "", 0];
+    }
+    else {
+        let values = getData(elementData_key+idx).split(";");
+        return [Number(values[0]), values[1], values[2], values[3]];
+    }
+}
+
+function setElementData(values) {
+    let str = "";
+    for (let i=0; i<values.length; ++i) {
+        str += values[i] + ";";
+    }
+    setData(elementData_key+values[0], str);
+}
+
+function delElementData(idx) {
+    let v = null;
+    if (idx < elementCount_val-1) {
+        for (let i=idx; i<elementCount_val-1; ++i) {
+            v = getElementData(i+1);
+            v[0] = i;
+            setElementData(v);
+        }
+    }
+    delData(elementData_key + (elementCount_val-1));
+    setData(elementCount_key, --elementCount_val);
+}
+
+function log(msg) { console.log(msg); }
+
+function reset() {
+    localStorage.clear();
+    location.reload();
+}
+
+function init() {
+    let elementCount = getData(elementCount_key);
+
+    if (elementCount == null) {
+        setData(elementCount_key, 0);
+        elementCount_val = 0;
+    }
+    else {
+        if (elementCount > 1000) {
+            alert("elementNum too big(" + elementCount + ")!");
+        }
+        else {
+            for (let i=0; i<elementCount; ++i) {
+                let values = getElementData(i);
+                newElement(values[1], values[2], values[3]);
+            }
+        }
+        elementCount_val = elementCount;
+    }
+
+    document.onkeydown = function() {
+        let values = null;
+        if (elementEditIdx != null) {
+            switch(event.keyCode) {
+                case 37: // arrow left
+                    values = getElementData(elementEditIdx);
+                    values[3] = Number(values[3]) - 1;
+                    setElementData(values);
+                    document.getElementById("number"+elementEditIdx).value = values[3];
+                    break;
+
+                case 38: // arrow up
+                    if (elementEditIdx > 0) {
+                        let a = elementEditIdx;
+                        let b = elementEditIdx - 1;
+                        let va = getElementData(a);
+                        let vb = getElementData(b);
+                        va[0] = b;
+                        vb[0] = a;
+                        elementEditIdx = b;
+                        setElementData(va);
+                        setElementData(vb);
+                        updateElement(va);
+                        updateElement(vb);
+                        document.getElementById("checkbox"+a).checked = false;
+                        document.getElementById("checkbox"+b).checked = true;
+                    }
+                    break;
+
+                case 39: // arrow right
+                    values = getElementData(elementEditIdx);
+                    values[3] = Number(values[3]) + 1;
+                    setElementData(values);
+                    document.getElementById("number"+elementEditIdx).value = values[3];
+                    break;
+
+                case 40: // arrow down
+                if (elementEditIdx < elementCount_val-1) {
+                        let a = elementEditIdx;
+                        let b = elementEditIdx + 1;
+                        let va = getElementData(a);
+                        let vb = getElementData(b);
+                        va[0] = b;
+                        vb[0] = a;
+                        elementEditIdx = b;
+                        setElementData(va);
+                        setElementData(vb);
+                        updateElement(va);
+                        updateElement(vb);
+                        document.getElementById("checkbox"+a).checked = false;
+                        document.getElementById("checkbox"+b).checked = true;
+                    }
+                    break;
+
+                default:
+                    //log("keydown " + event.keyCode);
+                    break;
+            }
+        }
+    };
+}
+
+function updateElement(values) {
+    if (values[1] == elementType_Bar) {
+        document.getElementById("tittle"+values[0]).hidden = true;
+        document.getElementById("number"+values[0]).hidden = true;
+    }
+    else {
+        document.getElementById("tittle"+values[0]).hidden = false;
+        document.getElementById("tittle"+values[0]).value = values[2];
+        document.getElementById("number"+values[0]).hidden = false;
+        document.getElementById("number"+values[0]).value = values[3];
+    }
+}
+
+function newElement(type, tittle = "", number = 0) {
+    let idx = Number(elementCount_val);
+
+    let div = document.createElement("div");
+    div.id = "div_" + idx;
+    div.classList.add("elementDiv_css");
+
+
+    let delBtn = document.createElement("button");
+    delBtn.textContent = "??";
+    delBtn.classList.add("elementBtn_css");
+    delBtn.onclick = function() {
+        div.remove();
+        delElementData(idx);
+        location.reload();
+    };
+    div.appendChild(delBtn);
+
+
+    let editCheckbox = document.createElement("input");
+    editCheckbox.id = "checkbox" + idx;
+    editCheckbox.type = "checkbox";
+    editCheckbox.onclick = function() {
+        if (this.checked) {
+            if (elementEditIdx === null) {
+                elementEditIdx = idx;
+            }
+            else {
+                this.checked = false;
+            }
+        }
+        else {
+            elementEditIdx = null;
+            location.reload();
+        }
+    };
+    div.appendChild(editCheckbox);
+
+
+    let tittleInput = document.createElement("input");
+    tittleInput.id = "tittle" + idx;
+    tittleInput.type = "text";
+    tittleInput.hidden = (type == elementType_Bar)? true:false;
+    tittleInput.classList.add("elementTittleInput_css");
+    tittleInput.value = tittle;
+    tittleInput.onchange = function() {
+        setElementData([idx, type, tittleInput.value, numberInput.value]);
+    };
+    div.appendChild(tittleInput);
+
+
+    let numberInput = document.createElement("input");
+    numberInput.id = "number" + idx;
+    numberInput.type = "number";
+    numberInput.hidden = (type == elementType_Bar)? true:false;
+    numberInput.classList.add("elementNumberInput_css");
+    numberInput.value = number;
+    numberInput.onchange = function() {
+        setElementData([idx, type, tittleInput.value, numberInput.value]);
+    };
+    div.appendChild(numberInput);
+
+
+    document.getElementById("elements").appendChild(div);
+    setData(elementCount_key, ++elementCount_val);
+    setElementData([idx, type, tittle, number]);
+}
+
+function exportData() {
+    let data = "";
+    for (let i=0; i<localStorage.length; ++i) {
+        data += localStorage.key(i) + "=" + localStorage.getItem(localStorage.key(i));
+    }
+    let textarea = document.createElement("textarea");
+    textarea.value = data;
+    textarea.select();
+    document.execCommand("copy");
+    alert(data);
+}
+
+</script>
+</head>
+
+<body>
+
+<div>
+    <button onclick=newElement(elementType_Animate);>Add Animate</button>
+    <button onclick=newElement(elementType_Bar);>Add Bar</button>
+    <button onclick=exportData(); download>Export</button>
+</div>
+
+<div id="elements"></div>
+
+<script type="text/javascript">
+    init();
+</script>
+</body>
+</html>
